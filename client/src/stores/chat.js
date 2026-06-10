@@ -10,6 +10,7 @@ export const useChatStore = defineStore('chat', () => {
   const hasMore = ref({})
   const loadingHistory = ref(false)
   const boards = ref([])
+  const joinedRooms = ref(new Set())
 
   const currentMessages = computed(() => messages.value[currentRoom.value] || [])
   const currentHasMore = computed(() => hasMore.value[currentRoom.value] !== false)
@@ -45,16 +46,37 @@ export const useChatStore = defineStore('chat', () => {
     const socket = getSocket()
     if (!socket) return
 
-    if (currentRoom.value && currentRoom.value !== room) {
-      socket.emit('chat:leave', currentRoom.value)
-    }
-
     socket.emit('chat:join', room)
+    joinedRooms.value.add(room)
     currentRoom.value = room
 
     if (!messages.value[room]) {
       messages.value[room] = []
       fetchHistory(room)
+    }
+  }
+
+  function joinAllRooms() {
+    const socket = getSocket()
+    if (!socket) return
+
+    const rooms = ['global', ...boards.value.map(b => 'board_' + b.id)]
+    for (const room of rooms) {
+      if (!joinedRooms.value.has(room)) {
+        socket.emit('chat:join', room)
+        joinedRooms.value.add(room)
+        if (!messages.value[room]) {
+          messages.value[room] = []
+          fetchHistory(room)
+        }
+      }
+    }
+  }
+
+  function switchRoom(room) {
+    currentRoom.value = room
+    if (!joinedRooms.value.has(room)) {
+      joinRoom(room)
     }
   }
 
@@ -128,7 +150,9 @@ export const useChatStore = defineStore('chat', () => {
   function cleanup() {
     const socket = getSocket()
     if (socket) {
-      socket.emit('chat:leave', currentRoom.value)
+      for (const room of joinedRooms.value) {
+        socket.emit('chat:leave', room)
+      }
       socket.off('chat:message')
       socket.off('chat:user_online')
       socket.off('chat:user_offline')
@@ -136,12 +160,13 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = {}
     onlineUsers.value = []
     currentRoom.value = 'global'
+    joinedRooms.value = new Set()
   }
 
   return {
-    currentRoom, messages, onlineUsers, hasMore, loadingHistory, boards,
+    currentRoom, messages, onlineUsers, hasMore, loadingHistory, boards, joinedRooms,
     currentMessages, currentHasMore,
-    setupListeners, joinRoom, fetchHistory, loadOlderMessages,
+    setupListeners, joinRoom, joinAllRooms, switchRoom, fetchHistory, loadOlderMessages,
     sendMessage, fetchOnlineUsers, fetchBoards, cleanup
   }
 })

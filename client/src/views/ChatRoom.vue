@@ -132,7 +132,7 @@ const roomDisplayName = computed(() => {
 })
 
 function switchRoom(room) {
-  chatStore.joinRoom(room)
+  chatStore.switchRoom(room)
   showEmojiPicker.value = false
   nextTick(() => {
     scrollToBottom()
@@ -199,7 +199,7 @@ onMounted(async () => {
   chatStore.setupListeners()
   await chatStore.fetchOnlineUsers()
   await chatStore.fetchBoards()
-  chatStore.joinRoom('global')
+  chatStore.joinAllRooms()
   nextTick(scrollToBottom)
 })
 
