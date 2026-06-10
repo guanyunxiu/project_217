@@ -66,6 +66,20 @@ async function initDatabase() {
       )
     `);
 
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        room VARCHAR(100) NOT NULL,
+        user_id INT NOT NULL,
+        username VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
+        type ENUM('text', 'emoji') NOT NULL DEFAULT 'text',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_room_created (room, created_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
     const [adminRows] = await conn.query("SELECT id FROM users WHERE username = 'admin'");
     if (adminRows.length === 0) {
       const bcrypt = require('bcryptjs');

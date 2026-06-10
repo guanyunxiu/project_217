@@ -8,6 +8,7 @@
           <router-link to="/boards">板块</router-link>
           <template v-if="userStore.isLoggedIn">
             <router-link to="/posts/create">发帖</router-link>
+            <router-link to="/chat">聊天</router-link>
             <router-link to="/notifications">
               通知
               <span v-if="userStore.unreadCount > 0" class="badge">{{ userStore.unreadCount }}</span>
