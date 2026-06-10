@@ -84,11 +84,22 @@ const showNotifPanel = ref(false)
 const panelNotifications = ref([])
 
 function handleLogout() {
+  userStore.offNotification(handleNotification)
+  const socket = getSocket()
+  if (socket) {
+    socket.off('private:message', handlePrivateMessage)
+  }
   userStore.logout()
-  window.location.href = '/login'
+  pmStore.cleanup()
+  showNotifPanel.value = false
+  hasNewNotif.value = false
+  hasNewPM.value = false
+  panelNotifications.value = []
+  router.push('/login')
 }
 
 function handleNotification() {
+  if (!userStore.isLoggedIn) return
   userStore.fetchUnreadCount()
   hasNewNotif.value = true
   setTimeout(() => { hasNewNotif.value = false }, 5000)
@@ -99,6 +110,7 @@ function handleNotification() {
 }
 
 function handlePrivateMessage() {
+  if (!userStore.isLoggedIn) return
   pmStore.fetchUnreadCount()
   hasNewPM.value = true
   setTimeout(() => { hasNewPM.value = false }, 5000)
@@ -195,13 +207,15 @@ function formatTime(t) {
 
 onMounted(() => {
   userStore.initSocket()
-  userStore.fetchUnreadCount()
-  userStore.onNotification(handleNotification)
-  pmStore.fetchUnreadCount()
+  if (userStore.isLoggedIn) {
+    userStore.fetchUnreadCount()
+    userStore.onNotification(handleNotification)
+    pmStore.fetchUnreadCount()
 
-  const socket = getSocket()
-  if (socket) {
-    socket.on('private:message', handlePrivateMessage)
+    const socket = getSocket()
+    if (socket) {
+      socket.on('private:message', handlePrivateMessage)
+    }
   }
 
   document.addEventListener('click', closeNotifPanel)

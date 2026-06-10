@@ -27,6 +27,7 @@ export const usePrivateMessageStore = defineStore('privateMessage', () => {
     socket.off('chat:user_offline')
 
     socket.on('private:message', (msg) => {
+      if (!localStorage.getItem('token')) return
       const myId = JSON.parse(localStorage.getItem('user') || '{}').id
       const otherId = currentOtherUser.value?.id
       const isCurrentConv = otherId && (
@@ -89,6 +90,7 @@ export const usePrivateMessageStore = defineStore('privateMessage', () => {
   }
 
   async function fetchConversations() {
+    if (!localStorage.getItem('token')) return
     try {
       const res = await api.get('/private-messages/conversations')
       conversations.value = res.data.conversations || []
@@ -99,6 +101,7 @@ export const usePrivateMessageStore = defineStore('privateMessage', () => {
   }
 
   async function fetchUnreadCount() {
+    if (!localStorage.getItem('token')) return
     try {
       const res = await api.get('/private-messages/unread-count')
       totalUnread.value = res.data.unreadCount || 0
