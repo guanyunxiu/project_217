@@ -48,6 +48,12 @@ const routes = [
     name: 'Chat',
     component: () => import('../views/ChatRoom.vue'),
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/messages',
+    name: 'PrivateMessages',
+    component: () => import('../views/PrivateMessages.vue'),
+    meta: { requiresAuth: true }
   }
 ]
 

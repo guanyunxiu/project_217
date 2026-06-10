@@ -13,6 +13,7 @@ const postRoutes = require('./routes/posts');
 const commentRoutes = require('./routes/comments');
 const notificationRoutes = require('./routes/notifications');
 const chatRoutes = require('./routes/chat');
+const pmRoutes = require('./routes/privateMessages');
 
 const app = express();
 const server = http.createServer(app);
@@ -38,6 +39,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/private-messages', pmRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -113,6 +115,64 @@ io.on('connection', (socket) => {
       } catch (err) {
         console.error('Save chat message error:', err);
       }
+    });
+
+    socket.on('private:message', async (data) => {
+      if (!data.receiver_id || !data.content) return;
+      const content = String(data.content).trim();
+      if (content.length === 0 || content.length > 2000) return;
+
+      try {
+        const [userRows] = await pool.query('SELECT id, username FROM users WHERE id = ?', [data.receiver_id]);
+        if (userRows.length === 0) return;
+
+        const [result] = await pool.query(
+          'INSERT INTO private_messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
+          [socket.user.id, data.receiver_id, content]
+        );
+
+        const message = {
+          id: result.insertId,
+          sender_id: socket.user.id,
+          receiver_id: data.receiver_id,
+          sender_username: socket.user.username,
+          content,
+          is_read: 0,
+          created_at: new Date().toISOString()
+        };
+
+        io.to(`user_${userRows[0].username}`).emit('private:message', message);
+        socket.emit('private:message', message);
+
+        await pool.query(
+          'INSERT INTO notifications (user_id, from_user_id, type, content, related_id) VALUES (?, ?, ?, ?, ?)',
+          [data.receiver_id, socket.user.id, 'private_message', `${socket.user.username}给你发送了私信`, null]
+        );
+
+        io.to(`user_${userRows[0].username}`).emit('notification', {
+          type: 'private_message',
+          content: `${socket.user.username}给你发送了私信`
+        });
+      } catch (err) {
+        console.error('Private message error:', err);
+      }
+    });
+
+    socket.on('private:typing', (data) => {
+      if (!data.receiver_id) return;
+      (async () => {
+        try {
+          const [userRows] = await pool.query('SELECT username FROM users WHERE id = ?', [data.receiver_id]);
+          if (userRows.length > 0) {
+            io.to(`user_${userRows[0].username}`).emit('private:typing', {
+              sender_id: socket.user.id,
+              sender_username: socket.user.username
+            });
+          }
+        } catch (err) {
+          // ignore
+        }
+      })();
     });
   }
 

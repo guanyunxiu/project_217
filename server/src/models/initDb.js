@@ -80,6 +80,21 @@ async function initDatabase() {
       )
     `);
 
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS private_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sender_id INT NOT NULL,
+        receiver_id INT NOT NULL,
+        content TEXT NOT NULL,
+        is_read TINYINT(1) DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_conversation (sender_id, receiver_id, created_at),
+        INDEX idx_receiver_read (receiver_id, is_read),
+        FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
     const [adminRows] = await conn.query("SELECT id FROM users WHERE username = 'admin'");
     if (adminRows.length === 0) {
       const bcrypt = require('bcryptjs');

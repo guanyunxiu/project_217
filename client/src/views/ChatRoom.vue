@@ -55,7 +55,7 @@
             <span class="chat-message-username">{{ msg.username }}</span>
             <span class="chat-message-time">{{ formatTime(msg.createdAt) }}</span>
           </div>
-          <div class="chat-message-content" v-html="renderContent(msg)"></div>
+          <div class="chat-message-content markdown-body" v-html="renderMarkdown(msg.content)"></div>
         </div>
       </div>
 
@@ -93,6 +93,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useUserStore } from '../stores/user'
 import { useChatStore } from '../stores/chat'
+import { renderMarkdown } from '../utils/markdown'
 
 const userStore = useUserStore()
 const chatStore = useChatStore()
@@ -153,13 +154,6 @@ function handleSend() {
 function insertEmoji(emoji) {
   inputText.value += emoji
   inputRef.value?.focus()
-}
-
-function renderContent(msg) {
-  let content = msg.content
-  content = content.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  content = content.replace(/\n/g, '<br>')
-  return content
 }
 
 function formatTime(t) {

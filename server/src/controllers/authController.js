@@ -47,6 +47,37 @@ exports.register = async (req, res) => {
   }
 };
 
+exports.getUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const [rows] = await pool.query('SELECT id, username, role, created_at FROM users WHERE id = ?', [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ message: '用户不存在' });
+    }
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('Get user error:', err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+};
+
+exports.searchUsers = async (req, res) => {
+  try {
+    const { q } = req.query;
+    if (!q || q.trim().length === 0) {
+      return res.json({ users: [] });
+    }
+    const [rows] = await pool.query(
+      'SELECT id, username, role, created_at FROM users WHERE username LIKE ? LIMIT 10',
+      [`%${q.trim()}%`]
+    );
+    res.json({ users: rows });
+  } catch (err) {
+    console.error('Search users error:', err);
+    res.status(500).json({ message: '服务器错误' });
+  }
+};
+
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
